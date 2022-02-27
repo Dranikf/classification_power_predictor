@@ -18,31 +18,45 @@ class classification_power_predictor():
 
 
     # BIG methods======================================================================
-    def update_predictors(self, fillna_nominal):
+    def update_predictors(self, fillna_nominal = None):
         '''refresh computing parameters according with current table'''
-        # inputs: 
+        # inputs:
+        # fillna_nominal -  optional, the value vich will replace na-values
+        #                   for the nominal predictors, in other way, they
+        #                   will be ignored  
 
-        self._predictors_data = []
+        self._predictors_data = {}
 
 
         for col_name in self._table.columns:
             new_column_data = {}
             new_column_data['name'] = col_name
+            new_column_data['emptys_count'] = sum(self._table[col_name].isna())
+
 
             is_numeric = np.isin(self._table[col_name].dtype, 
                                 [np.int64, np.float64, np.int32, np.float64])
-            new_column_data['predictor_type'] = 'numeric' if is_numeric else 'nominal'
 
-            new_column_data['describe_table'] = (get_describe_numeric(self._table[col_name])
-                                                    if is_numeric
-                                                    else get_describe_nominal(self._table[col_name], self._y_col))
+            if is_numeric:
+                new_column_data['predictor_type'] = 'numeric'
+                new_column_data['describe_table'] = get_describe_numeric(self._table[col_name])
+                
+            else:
+                new_column_data['predictor_type'] = 'nominal'
+                new_column_data['describe_table'] = get_describe_nominal(self._table[col_name], self._y_col)
+                    
+
+            computions_column = (self._table[col_name].fillna(fillna_nominal)
+                                if (not(fillna_nominal is None) and not(is_numeric))
+                                else self._table[col_name])
             
-            #new_column_data['AUC'], new_column_data['type_of_rel'], 
-            #new_column_data['GINI'] =  
+            new_column_data['AUC_data'] = get_full_AUC( computions_column,
+                                                        self._y_col,
+                                                        new_column_data['predictor_type'],
+                                                        new_column_data['describe_table'])
 
 
-            self._predictors_data.append(new_column_data)
-            #self._predictors_data['describe_table']
+            self._predictors_data[col_name] = new_column_data
 
 
 
@@ -54,17 +68,6 @@ class classification_power_predictor():
             self._add_sheet(xl_writer, col_data['name'])
             
     # BIG methods======================================================================
-
-
-    # compution methods ===============================================================
-
-    
-    def _get_full_AUC(self, column):
-
-
-
-        pass
-    # compution methods ===============================================================
 
 
     # excel writing methods ===========================================================
