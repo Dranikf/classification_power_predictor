@@ -1,6 +1,7 @@
 import pandas as pd;
 import numpy as np;
 from computions import *
+from writing import *
 
 
 class classification_power_predictor():
@@ -65,40 +66,13 @@ class classification_power_predictor():
         # xl_writer - pandas.io.excel._xlsxwriter.XlsxWriter wich will be used for book saving
 
         for col_data in self._predictors_data:
-            self._add_sheet(xl_writer, col_data['name'])
+            add_sheet(xl_writer, col_data['name'])
             
     # BIG methods======================================================================
 
 
     # excel writing methods ===========================================================
-    def _add_sheet(self, xl_writer, sheet_name):
-        '''Adding a sheet with setted name.
-        Illegal characters will be removed.
-        If name is too long it will be cutted.
-        If there is same names they will be numerated.'''
-        # inputs:
-        # xl_writer - книга на которую надо добавить лист
-        # sheet_name - название создаваемого листа
-        
-        sheet_name = sheet_name.replace('/', ' ')
-        sheet_name = sheet_name if len(sheet_name) < 31 else sheet_name[0:31]
-        
-        # нужно удостовериться что такого-же названия нет
-        # если есть то изменим последний символ так, чтобы
-        # было правильно
-        i = 2
-        while sheet_name in xl_writer.sheets.keys():
-            temp = list(sheet_name) 
-            if len(sheet_name) == 31 or i > 2: temp[-1] = str(i)
-            else: temp.append(str(i))
 
-            i += 1
-            sheet_name = "".join(temp)
-        
-        result_sheet = xl_writer.book.add_worksheet(sheet_name)
-        xl_writer.sheets[sheet_name] = result_sheet
-        
-        return sheet_name
     # excel writing methods ===========================================================
 
 
