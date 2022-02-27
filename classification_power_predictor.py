@@ -8,6 +8,10 @@ class classification_power_predictor():
 
 
     _predictors_data = None
+    header_creator = default_header_creator
+    default_header_format = {'bold': 1, 'border': 1, 'align': 'center', 
+                            'valign': 'vcenter', 'fg_color': '#C0C0C0',
+                            'font_size':15}
 
     def __init__(self, table, y_col) -> None:
         # inputs:
@@ -65,15 +69,13 @@ class classification_power_predictor():
         '''metod creates, sheet for every predictor in table'''
         # xl_writer - pandas.io.excel._xlsxwriter.XlsxWriter wich will be used for book saving
 
-        for col_data in self._predictors_data:
-            add_sheet(xl_writer, col_data['name'])
+        default_header_format = xl_writer.book.add_format(self.default_header_format)
+
+        for col_data in self._predictors_data.values():
+            curr_shit_name = add_sheet(xl_writer, col_data['name'])
+            self.header_creator(xl_writer.sheets[curr_shit_name], col_data, default_header_format)
             
     # BIG methods======================================================================
-
-
-    # excel writing methods ===========================================================
-
-    # excel writing methods ===========================================================
 
 
     # getters==========================================================================
