@@ -27,6 +27,7 @@ def get_describe_nominal(column, y_col):
     # outputs:
     # pandas.DataFrame table wich describes distribution of predictor
 
+    print(column.name)
     result = pd.DataFrame(column.value_counts())
 
     for level in y_col.unique():
@@ -34,6 +35,8 @@ def get_describe_nominal(column, y_col):
         result[level] = column[y_col == level].value_counts()
         result[str(level) + '%'] = result[level]*100/result.iloc[:,0]
         
+    result.rename(columns = {column.name : 'count'}, inplace = True)
+    result.index.names = [column.name]
     return result.fillna(0)
 
 
@@ -114,4 +117,69 @@ def get_full_AUC(column, y_col, predictor_type, descr_table = None):
 
     showing_aucs = {key: recomputor(key) for key in real_aucs}
 
-    return showing_aucs 
+    return showing_aucs
+
+
+def AUC_info_to_DataFrame(AUC_info, predictors_name = None):
+    '''Recording structure of dicts describing AUC and same 
+    inicators into multiindex column dataframe'''
+    headers_tuples = []
+    line_numbers = []
+
+    # preparing new line and multiindex
+    for level in AUC_info:
+        for indicator in AUC_info[level]:
+            headers_tuples.append((level, indicator))
+            line_numbers.append(AUC_info[level][indicator])
+
+    col_ind = "0" if predictors_name is None else predictors_name
+
+    # creating DataFrame
+    result = pd.DataFrame(columns = pd.MultiIndex.from_tuples(headers_tuples))
+    result.loc[col_ind, :] = line_numbers
+    return result
+
+
+def get_all_comuptions(column, y_col, fillna_nominal = None):
+    new_column_data = {}
+    new_column_data['name'] = column.name
+    new_column_data['emptys_count'] = sum(column.isna())
+    new_column_data['emptys_part'] = (new_column_data['emptys_count'] / 
+                                      column.shape[0])
+
+
+    is_numeric = np.isin(column.dtype, 
+                        [np.int64, np.float64, np.int32, np.float64])
+
+    if is_numeric:
+        new_column_data['predictor_type'] = 'numeric'
+        new_column_data['describe_table'] = get_describe_numeric(column)
+                
+    else:
+        new_column_data['predictor_type'] = 'nominal'
+        new_column_data['describe_table'] = get_describe_nominal(column, y_col)
+                    
+
+    computions_column = (column.fillna(fillna_nominal)
+                        if (not(fillna_nominal is None) and not(is_numeric))
+                        else column)
+            
+    full_AUC = get_full_AUC( computions_column,
+                            y_col,
+                            new_column_data['predictor_type'],
+                            new_column_data['describe_table'])
+
+            
+    new_column_data['AUC_data'] = AUC_info_to_DataFrame(full_AUC, column.name)
+            
+    return new_column_data
+
+
+def get_predictor_row(column_data):
+
+    return pd.concat([ column_data['AUC_data'], 
+                        pd.DataFrame({'Empty' : [column_data['emptys_count']],
+                                      'Empty part%': [column_data['emptys_part']*100]})], 
+                        axis = 0)
+
+    

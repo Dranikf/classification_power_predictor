@@ -1,3 +1,5 @@
+from xlsxwriter.utility import xl_cell_to_rowcol, xl_rowcol_to_cell
+
 def add_sheet(xl_writer, sheet_name):
     '''Adding a sheet with setted name.
     Illegal characters will be removed.
@@ -32,16 +34,47 @@ def add_sheet(xl_writer, sheet_name):
     return final_name
 
 
-def default_header_creator(calling_obj ,sheet, predictors_data, default_format):
-    '''Создание заголовка описывающего переменную и его нанаесение на лист'''
+def default_header_printer(calling_obj, sheet, predictors_data, format):
+    '''Defatul funciton for header creator'''
     # inputs:
-    # col - имя колонки которой посвящен лист
-    # df_name - название data frame который обрабатывается
-    # is_numeric - маркер, что даст понять численная ли переменная
-    # header_format - формат ячеки заголовка
-    # header_range - диапазон в который ляжет ячейка заголовок
+    # calling_obj - object that called the function 
+    # sheet - the xlwriter sheet on which the title is to be placed
+    # predictors_data - full description of predictor 
+    #                   which creared in update_predictors
+    # format - format which will be used for header
     
     header_info = ""
     header_info +=   ('Column: ' + predictors_data['name'] + '\n' + 
                      'Type: '+  predictors_data['predictor_type'])
-    sheet.merge_range("A1:K10", header_info , default_format)
+    sheet.merge_range("A1:K10", header_info , format)
+
+
+def print_table_header(calling_obj, sheet, table, start_cell, head_text, header_bar_fromat):
+    '''default method for add desctibe table on excel sheet'''
+    # inputs:
+    # calling_obj - object that called the function 
+    # sheet - the xlwriter sheet on which the title is to be placed
+    # table - pandas.DataFrame table to save
+    # start_cell - str sell from which table will start
+    # head_text - text which will dispalyed at the header
+    # header_bar_fromat - bar which will be displayed above the table
+    
+    s_row, s_col = xl_cell_to_rowcol(start_cell)
+    header_bar_range = (start_cell + ":" + 
+                        xl_rowcol_to_cell(s_row, s_col + table.shape[1]))
+    sheet.merge_range(header_bar_range, head_text, header_bar_fromat)
+    table.to_excel(calling_obj.my_writer, sheet_name = sheet.name,
+                    startrow = s_row+1, startcol = s_col)
+
+    
+def default_predictor_printer(calling_obj, sheet, predictors_data, defatult_formats):
+    # inputs:
+    # calling_obj - object that called the function
+    # sheet - the xlwriter sheet on which the title is to be placed
+    # predictors_data - full description of predictor 
+    #                   which creared in update_predictors
+    # defatult_formats - formats which will be used be default
+
+    calling_obj.default_header_printer(sheet, predictors_data, defatult_formats['header_format'])
+    calling_obj.default_tab_head_pr(sheet, predictors_data['describe_table'], "A12",
+                                    "Description", defatult_formats['desc_format'])

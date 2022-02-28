@@ -108,7 +108,7 @@ def print_rel_table(xl_writer, sheet_name, table, header_format, start_cell = re
     header_range = xl_range(start_row_col[0], start_row_col[1], start_row_col[0], start_row_col[1]+6)
     xl_writer.sheets[sheet_name].merge_range(header_range, "Статистика взаимосвязи" , header_format)
     
-    table.to_excel(xl_writer, sheet_name = sheet_name, startrow=start_row_col[0] + 1 , startcol=start_row_col[1], index=False)
+    #table.to_excel(xl_writer, sheet_name = sheet_name, startrow=start_row_col[0] + 1 , startcol=start_row_col[1], index=False)
     
     
 def rgb_to_hex(rgb):
