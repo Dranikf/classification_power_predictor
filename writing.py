@@ -42,7 +42,7 @@ def default_header_printer(calling_obj, sheet, predictors_data, format):
     # predictors_data - full description of predictor 
     #                   which creared in update_predictors
     # format - format which will be used for header
-    
+
     header_info = ""
     header_info +=   ('Column: ' + predictors_data['name'] + '\n' + 
                      'Type: '+  predictors_data['predictor_type'])
@@ -66,7 +66,29 @@ def print_table_header(calling_obj, sheet, table, start_cell, head_text, header_
     table.to_excel(calling_obj.my_writer, sheet_name = sheet.name,
                     startrow = s_row+1, startcol = s_col)
 
-    
+
+def save_double_column_df(df, xl_writer, startrow = 0, **kwargs):
+    '''Function to save doublecolumn DataFrame, to xlwriter'''
+    # inputs:
+    # df - pandas dataframe to save
+    # xl_writer - book for saving
+    # startrow - row from wich data frame will begins
+    # **kwargs - arguments of `to_excel` function of DataFrame`
+    df.drop(df.index).to_excel(xl_writer, startrow = startrow, **kwargs)
+    df.to_excel(xl_writer, startrow = startrow + 1, header = False, **kwargs)
+
+def print_double_column_header( calling_obj, sheet, table, start_cell, 
+                                head_text, header_bar_fromat):
+    '''default funciton for printing classify ability indicators'''
+    s_row, s_col = xl_cell_to_rowcol(start_cell)
+    header_bar_range = (start_cell + ":" + 
+                        xl_rowcol_to_cell(s_row, s_col + table.shape[1]))
+    sheet.merge_range(header_bar_range, head_text, header_bar_fromat)
+    save_double_column_df(table, calling_obj.my_writer, sheet_name = sheet.name,
+                            startrow = s_row+1, startcol = s_col)
+
+
+
 def default_predictor_printer(calling_obj, sheet, predictors_data, defatult_formats):
     # inputs:
     # calling_obj - object that called the function
@@ -75,6 +97,11 @@ def default_predictor_printer(calling_obj, sheet, predictors_data, defatult_form
     #                   which creared in update_predictors
     # defatult_formats - formats which will be used be default
 
-    calling_obj.default_header_printer(sheet, predictors_data, defatult_formats['header_format'])
-    calling_obj.default_tab_head_pr(sheet, predictors_data['describe_table'], "A12",
-                                    "Description", defatult_formats['desc_format'])
+    calling_obj.header_printer(sheet, predictors_data, defatult_formats['header_format'])
+    calling_obj.describe_table_printer( sheet, predictors_data['describe_table'], "A12",
+                                        "Description", defatult_formats['desc_format'])
+  
+    calling_obj.class_ability_table_printer( sheet, 
+                                        calling_obj.result_DF.loc[[predictors_data['name']],:],
+                                        "M1", "Classification ability", 
+                                        defatult_formats['class_ab_format'])

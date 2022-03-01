@@ -4,6 +4,8 @@ import numpy as np
 
 from sklearn.metrics import roc_auc_score
 
+
+#==========================Real computions========================================
 def get_describe_numeric(column):
     '''Desctibe table for numeric predictor'''
     # inputs:
@@ -120,27 +122,16 @@ def get_full_AUC(column, y_col, predictor_type, descr_table = None):
     return showing_aucs
 
 
-def AUC_info_to_DataFrame(AUC_info, predictors_name = None):
-    '''Recording structure of dicts describing AUC and same 
-    inicators into multiindex column dataframe'''
-    headers_tuples = []
-    line_numbers = []
-
-    # preparing new line and multiindex
-    for level in AUC_info:
-        for indicator in AUC_info[level]:
-            headers_tuples.append((level, indicator))
-            line_numbers.append(AUC_info[level][indicator])
-
-    col_ind = "0" if predictors_name is None else predictors_name
-
-    # creating DataFrame
-    result = pd.DataFrame(columns = pd.MultiIndex.from_tuples(headers_tuples))
-    result.loc[col_ind, :] = line_numbers
-    return result
-
 
 def get_all_comuptions(column, y_col, fillna_nominal = None):
+    '''Realise all computions for each column'''
+    # imputs:
+    # column - pandas.Series predictors column
+    # y_col - pandas.Series predicted column
+    # fillna_nominal -  optional, the value vich will replace na-values
+    #                   for the nominal predictors, in other way, they
+    #                   will be ignored 
+
     new_column_data = {}
     new_column_data['name'] = column.name
     new_column_data['emptys_count'] = sum(column.isna())
@@ -164,22 +155,44 @@ def get_all_comuptions(column, y_col, fillna_nominal = None):
                         if (not(fillna_nominal is None) and not(is_numeric))
                         else column)
             
-    full_AUC = get_full_AUC( computions_column,
-                            y_col,
-                            new_column_data['predictor_type'],
-                            new_column_data['describe_table'])
-
-            
-    new_column_data['AUC_data'] = AUC_info_to_DataFrame(full_AUC, column.name)
+    new_column_data['AUC_data'] = get_full_AUC( computions_column,
+                                                y_col,
+                                                new_column_data['predictor_type'],
+                                                new_column_data['describe_table'])
             
     return new_column_data
 
+#==========================Real computions========================================
+
+#==========================Data represintations===================================
+
+def AUC_info_to_DataFrame(AUC_info, predictors_name = None):
+    '''Recording structure of dicts describing AUC and same 
+    inicators into multiindex column dataframe'''
+    # AUC_info - get_full_AUC function output
+    # predictors_name - name of predictor, will be used as
+    #                   index for new columns
+    headers_tuples = []
+    line_numbers = []
+
+    # preparing new line and multiindex
+    for level in AUC_info:
+        for indicator in AUC_info[level]:
+            headers_tuples.append((level, indicator))
+            line_numbers.append(AUC_info[level][indicator])
+
+    col_ind = "0" if predictors_name is None else predictors_name
+
+    # creating DataFrame
+    result = pd.DataFrame(columns = pd.MultiIndex.from_tuples(headers_tuples))
+    result.loc[col_ind, :] = line_numbers
+    return result
 
 def get_predictor_row(column_data):
 
-    return pd.concat([ column_data['AUC_data'], 
-                        pd.DataFrame({'Empty' : [column_data['emptys_count']],
-                                      'Empty part%': [column_data['emptys_part']*100]})], 
-                        axis = 0)
+    result = AUC_info_to_DataFrame(column_data['AUC_data'], column_data['name'])
+    result['Emptys'] = column_data['emptys_count']
+    result['Emptys part'] = column_data['emptys_part']
+    return result
 
-    
+#==========================Data represintations===================================    
