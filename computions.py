@@ -29,7 +29,6 @@ def get_describe_nominal(column, y_col):
     # outputs:
     # pandas.DataFrame table wich describes distribution of predictor
 
-    print(column.name)
     result = pd.DataFrame(column.value_counts())
 
     for level in y_col.unique():
@@ -116,9 +115,11 @@ def get_full_AUC(column, y_col, predictor_type, descr_table = None, fillna_nomin
         real_aucs = get_AUC_numeric(column, y_col)
     else:
         if fillna_nominal is None:
+            y_col = y_col.drop(y_col[column.isna()].index)
             column = column.dropna()
         else:
             column = column.fillna(fillna_nominal)
+            
         real_aucs = get_AUC_nominal(column, y_col, descr_table)
 
     def recomputor(key):
