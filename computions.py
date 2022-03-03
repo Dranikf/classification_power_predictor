@@ -22,9 +22,10 @@ def get_describe_numeric(column):
 
 
 def get_describe_nominal(column, y_col):
-    '''disctibution of levels of nominal predictor'''
+    '''Disctibution of levels of nominal predictor'''
     # inputs:
     # column - pandas.Series which contains predictor values
+    #          na values should be replaced
     # y_col - pandas.Series which contains predicted value
     # outputs:
     # pandas.DataFrame table wich describes distribution of predictor
@@ -93,18 +94,15 @@ def get_AUC_nominal(column, y_col, descr_table = None):
     return result
 
 
-def get_full_AUC(column, y_col, predictor_type, descr_table = None, fillna_nominal = None):
+def get_full_AUC(column, y_col, predictor_type, descr_table = None):
     '''funciton for getting AUC for any predictor type.
     If returns "showing" AUC - if real AUC less then 0.5
     it doesn't seem that predictor bad - it seems that 
     relationship inverse, so in this case showing AUC is 
-    (1 - <real AUC>)'''
+    (1 - <real AUC>). All inputs must be without nas!'''
     # inputs:
     # column - pandas.Series predictors column
     # y_col - pandas.Series predicted column
-    # fillna_nominal -  Nominal predictors should don't have emptys values
-    #                   by default rows with nas will be removed. In other
-    #                   case will be used getted value
     #                   
     # outputs:
     # dict {<level of y_col>: {"AUC":<showing auc>,
@@ -114,12 +112,6 @@ def get_full_AUC(column, y_col, predictor_type, descr_table = None, fillna_nomin
     if predictor_type == 'numeric':
         real_aucs = get_AUC_numeric(column, y_col)
     else:
-        if fillna_nominal is None:
-            y_col = y_col.drop(y_col[column.isna()].index)
-            column = column.dropna()
-        else:
-            column = column.fillna(fillna_nominal)
-            
         real_aucs = get_AUC_nominal(column, y_col, descr_table)
 
     def recomputor(key):
@@ -135,14 +127,13 @@ def get_full_AUC(column, y_col, predictor_type, descr_table = None, fillna_nomin
 
 
 
-def get_all_comuptions(column, y_col, fillna_nominal = None):
+def get_all_comuptions(column, y_col, fillna_nominal = 'Empty'):
     '''Realise all computions for each column'''
     # imputs:
     # column - pandas.Series predictors column
     # y_col - pandas.Series predicted column
     # fillna_nominal -  optional, the value vich will replace na-values
-    #                   for the nominal predictors, in other way, they
-    #                   will be ignored 
+    #                   "Empty" by default
 
     new_column_data = {}
     new_column_data['name'] = column.name
@@ -160,13 +151,12 @@ def get_all_comuptions(column, y_col, fillna_nominal = None):
                 
     else:
         new_column_data['predictor_type'] = 'nominal'
+        column = column.fillna(fillna_nominal)
         new_column_data['describe_table'] = get_describe_nominal(column, y_col)
-                    
-            
+
     new_column_data['AUC_data'] = get_full_AUC( column,
                                                 y_col,
                                                 new_column_data['predictor_type'],
-                                                fillna_nominal = fillna_nominal,
                                                 descr_table = new_column_data['describe_table'])
             
     return new_column_data
