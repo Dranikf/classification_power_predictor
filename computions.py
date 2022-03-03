@@ -94,7 +94,7 @@ def get_AUC_nominal(column, y_col, descr_table = None):
     return result
 
 
-def get_full_AUC(column, y_col, predictor_type, descr_table = None):
+def get_full_AUC(column, y_col, predictor_type, descr_table = None, fillna_nominal = None):
     '''funciton for getting AUC for any predictor type.
     If returns "showing" AUC - if real AUC less then 0.5
     it doesn't seem that predictor bad - it seems that 
@@ -103,12 +103,23 @@ def get_full_AUC(column, y_col, predictor_type, descr_table = None):
     # inputs:
     # column - pandas.Series predictors column
     # y_col - pandas.Series predicted column
+    # fillna_nominal -  Nominal predictors should don't have emptys values
+    #                   by default rows with nas will be removed. In other
+    #                   case will be used getted value
+    #                   
     # outputs:
     # dict {<level of y_col>: {"AUC":<showing auc>,
     #                          "rel_type" <rel. type -1/1>,
     #                           "GINI": <GINI>}}
-    real_aucs =  (get_AUC_numeric(column, y_col) if predictor_type == 'numeric' 
-                 else get_AUC_nominal(column, y_col, descr_table))
+
+    if predictor_type == 'numeric':
+        real_aucs = get_AUC_numeric(column, y_col)
+    else:
+        if fillna_nominal is None:
+            column = column.dropna()
+        else:
+            column = column.fillna(fillna_nominal)
+        real_aucs = get_AUC_nominal(column, y_col, descr_table)
 
     def recomputor(key):
         if real_aucs[key] < 0.5: result = {'AUC': 1 - real_aucs[key],'rel_type': -1}
@@ -150,15 +161,12 @@ def get_all_comuptions(column, y_col, fillna_nominal = None):
         new_column_data['predictor_type'] = 'nominal'
         new_column_data['describe_table'] = get_describe_nominal(column, y_col)
                     
-
-    computions_column = (column.fillna(fillna_nominal)
-                        if (not(fillna_nominal is None) and not(is_numeric))
-                        else column)
             
-    new_column_data['AUC_data'] = get_full_AUC( computions_column,
+    new_column_data['AUC_data'] = get_full_AUC( column,
                                                 y_col,
                                                 new_column_data['predictor_type'],
-                                                new_column_data['describe_table'])
+                                                fillna_nominal = fillna_nominal,
+                                                descr_table = new_column_data['describe_table'])
             
     return new_column_data
 
