@@ -1,0 +1,3 @@
+[submodule "DS_common"]
+	path = DS_common
+	url = https://github.com/Dranikf/DS_common.git
