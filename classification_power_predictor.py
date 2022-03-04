@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from computions import *
 from writing import *
+from DS_common.excel_writing import add_sheet
 
 
 class classification_power_predictor():
