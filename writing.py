@@ -55,11 +55,13 @@ def default_predictor_printer(calling_obj, sheet, predictors_data, defatult_form
     #                   which creared in update_predictors
     # defatult_formats - formats which will be used be default
 
-    calling_obj.header_printer(sheet, predictors_data, defatult_formats['header_format'])
-    calling_obj.describe_table_printer( sheet, predictors_data['describe_table'], "A12",
-                                        "Description", defatult_formats['desc_format'])
+    calling_obj.header_printer(calling_obj, sheet, predictors_data, defatult_formats['header_format'])
+    calling_obj.describe_table_printer(
+        calling_obj, sheet, predictors_data['describe_table'], "A12",
+        "Description", defatult_formats['desc_format']
+    )
   
-    calling_obj.class_ability_table_printer( sheet, 
-                                        calling_obj.result_DF.loc[[predictors_data['name']],:],
-                                        "M1", "Classification ability", 
-                                        defatult_formats['class_ab_format'])
+    calling_obj.class_ability_table_printer(
+        calling_obj, sheet, calling_obj.result_DF.loc[[predictors_data['name']],:],
+        "M1", "Classification ability", defatult_formats['class_ab_format']
+    )

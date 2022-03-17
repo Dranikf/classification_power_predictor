@@ -31,6 +31,10 @@ class classification_power_predictor():
         # for display infor at list
         self.predictor_printer = default_predictor_printer
 
+        self.header_printer = default_header_printer
+        self.describe_table_printer = print_table_header
+        self.class_ability_table_printer = print_double_column_header
+
 
     # BIG methods======================================================================
     def update_predictors(self, fillna_nominal = None):
