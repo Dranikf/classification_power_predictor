@@ -9,24 +9,27 @@ class classification_power_predictor():
 
 
     _predictors_data = None
-    # funcotion wich will be called for every predictor
-    # for display infor at list
-    predictor_printer = default_predictor_printer
-    default_header_format = {'bold': 1, 'border': 1, 'align': 'center', 
-                            'valign': 'vcenter', 'fg_color': '#C0C0C0',
-                            'font_size':15}
-    header_printer = default_header_printer
-    describe_table_printer = print_table_header
-    class_ability_table_printer = print_double_column_header
+    default_header_format = {
+        'bold': 1, 'border': 1, 'align': 'center', 
+        'valign': 'vcenter', 'fg_color': '#C0C0C0',
+        'font_size':15
+    }
+
+
     
 
     def __init__(self, table, y_col) -> None:
         # inputs:
         # table - pandas.DataFrame wich contains
         # y_col - pandas.Series model output column(Y)
-
         self._table = table
         self._y_col = y_col
+
+        # method for adding sheets to the workbook
+        self.sheet_adder = add_sheet
+        # funcotion wich will be called for every predictor
+        # for display infor at list
+        self.predictor_printer = default_predictor_printer
 
 
     # BIG methods======================================================================
@@ -52,14 +55,16 @@ class classification_power_predictor():
         '''metod creates, sheet for every predictor in table'''
         # xl_writer - pandas.io.excel._xlsxwriter.XlsxWriter wich will be used for book saving
         self.my_writer = xl_writer
-        my_formats = {'header_format':xl_writer.book.add_format(self.default_header_format),
-                      'desc_format':xl_writer.book.add_format(self.default_header_format),
-                      'class_ab_format':xl_writer.book.add_format(self.default_header_format)}
+        my_formats = {
+            'header_format':xl_writer.book.add_format(self.default_header_format),
+            'desc_format':xl_writer.book.add_format(self.default_header_format),
+            'class_ab_format':xl_writer.book.add_format(self.default_header_format)
+        }
 
         for col_data in self._predictors_data.values():
-            curr_shit_name = add_sheet(xl_writer, col_data['name'])
-            self.predictor_printer( xl_writer.sheets[curr_shit_name],
-                                    col_data, my_formats)
+            curr_shit_name = self.sheet_adder(xl_writer, col_data['name'])
+            self.predictor_printer(
+                self, xl_writer.sheets[curr_shit_name], col_data, my_formats)
         del self.my_writer
     # BIG methods======================================================================
 
