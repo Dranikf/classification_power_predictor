@@ -52,9 +52,7 @@ def get_AUC_numeric(column, y_col):
     y_col = y_col[np.invert(column.isna())]
     column = column.dropna()
 
-
     result = {}
-    
 
     # for every y_col level we have auc computed as all vs one
     for level in y_col.unique():
@@ -154,10 +152,10 @@ def get_all_comuptions(column, y_col, fillna_nominal = 'Empty'):
         column = column.fillna(fillna_nominal)
         new_column_data['describe_table'] = get_describe_nominal(column, y_col)
 
-    new_column_data['AUC_data'] = get_full_AUC( column,
-                                                y_col,
-                                                new_column_data['predictor_type'],
-                                                descr_table = new_column_data['describe_table'])
+    new_column_data['AUC_data'] = get_full_AUC( 
+        column, y_col, new_column_data['predictor_type'],
+        descr_table = new_column_data['describe_table']
+    )
             
     return new_column_data
 
