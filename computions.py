@@ -17,9 +17,10 @@ def get_describe_numeric(column):
 
     result = pd.DataFrame({"Value:":column.describe()})
     result['Part %:'] = np.NaN
-    emp_tab = pd.DataFrame({"Value:":sum(column.isna()), 
-                            "Part %:":sum(column.isna())*100/column.shape[0]}, 
-                            index = ["Emptys"])
+    emp_tab = pd.DataFrame({
+        "Value:":sum(column.isna()), 
+        "Part %:":sum(column.isna())*100/column.shape[0]
+    }, index = ["Empty"])
 
         
     return pd.concat([result, emp_tab])
@@ -164,6 +165,8 @@ def get_full_stats(column, y_col, predictor_type, descr_table = None):
             else [1 - stats[y_level]["AUC"], -1]
         
         stats[y_level]["GINI"] = (stats[y_level]["AUC"] - 0.5)*2
+        stats[y_level]["Empty"] = sum(column.isna())
+        #stats[]
 
     return stats
 
@@ -230,8 +233,8 @@ def stats_info_to_DataFrame(stats_info, predictors_name = None):
 def get_predictor_row(column_data):
 
     result = stats_info_to_DataFrame(column_data['stats_result'], column_data['name'])
-    result['Emptys'] = column_data['emptys_count']
-    result['Emptys part'] = column_data['emptys_part']
+    result['Empty'] = column_data['emptys_count']
+    result['Empty part'] = column_data['emptys_part']
     return result
 
 #==========================Data represintations===================================    
