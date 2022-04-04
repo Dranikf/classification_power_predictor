@@ -46,27 +46,6 @@ def get_describe_nominal(column, y_col):
     return result.fillna(0)
 
 
-def get_AUC_numeric(column, y_col):
-    '''AUC compution for numeric variable'''
-    # inputs:
-    # column - pandas.Series predictor column
-    # y_col - pandas.Series predicted column
-    # outputs:
-    # dictionary which contains result {<y_levels>:<AUC for this levels>}
-    y_col = y_col[np.invert(column.isna())]
-    column = column.dropna()
-
-    result = {}
-
-    # for every y_col level we have auc computed as all vs one
-    for level in y_col.unique():
-        temp_binary_column = y_col.apply(lambda x: 0 if x != level else 1)
-        result[level] = (roc_auc_score(temp_binary_column, column/sum(column)) 
-                            if column.var() != 0 else 0.5)
-        
-    return result
-
-
 def get_KS_ts_pvalue(y_col, level, KS_stat):
     '''Get two side p-value for KS stat'''
     # inputs:
@@ -154,73 +133,43 @@ def get_stats_nominal(column, y_col, descr_table = None):
     return result
 
 
-
-def get_AUC_nominal(column, y_col, descr_table = None):
-    '''Returns AUC for nominal predictor. Levels will be
-    displayed in order of increasing part of predicted level.
-    Nas in column will be ignored, should be processed before '''
-    # inputs:
-    # column - pandas.Series predictors column
-    # y_col - pandas.Series predicted column
-    # descr_table - pandas.DataFrame (optional), out of get_describe_nominal
-    #               function for predictor. Will be computed automaticaly by default
-    # outputs:
-    # dictionary which contains result {<y_levels>:<AUC for this levels>}
-    if descr_table is None:
-        descr_table = get_describe_nominal(column, y_col)
-    
-    # in case column has only one level need return 0.5
-    # for all y levels - predictor are useless
-    if descr_table.shape[0] <= 1:
-        return {level : 0.5 for level in y_col.unique()}
-
-    result = {}
-
-    for level in y_col.unique():
-        temp_binary_column = y_col.apply(lambda x: 0 if x != level else 1)
-        level_distr = descr_table[str(level) + "%"].sort_values()
-        numbers = column.replace({n:i for i,n in enumerate(level_distr.index)})
-        result[level] = roc_auc_score(temp_binary_column, numbers/sum(numbers))
-
-    return result
-
-
-def get_full_AUC(column, y_col, predictor_type, descr_table = None):
-    '''funciton for getting AUC for any predictor type.
-    If returns "showing" AUC - if real AUC less then 0.5
-    it doesn't seem that predictor bad - it seems that 
-    relationship inverse, so in this case showing AUC is 
-    (1 - <real AUC>). All inputs must be without nas!'''
+def get_full_stats(column, y_col, predictor_type, descr_table = None):
+    '''Funciton for getting AUC and other statistics
+    for any predictor type. If returns "showing" AUC - 
+    if real AUC less then 0.5 it doesn't seem that 
+    predictor bad - it seems that relationship inverse, 
+    so in this case showing AUC is (1 - <real AUC>). 
+    All inputs must be without nas!'''
     # inputs:
     # column - pandas.Series predictors column
     # y_col - pandas.Series predicted column
     #                   
     # outputs:
     # dict {<level of y_col>: {"AUC":<showing auc>,
+    #                          "KS": KS statistics
+    #                          "KS_p_value": p value for two side KS test
     #                          "rel_type" <rel. type -1/1>,
     #                           "GINI": <GINI>}}
 
     if predictor_type == 'numeric':
-        real_aucs = get_AUC_numeric(column, y_col)
+        stats = get_stats_numeric(column, y_col)
     else:
-        real_aucs = get_AUC_nominal(column, y_col, descr_table)
+        stats = get_stats_nominal(column, y_col, descr_table)
+    
+    
+    for y_level in stats:
+        stats[y_level]["AUC"], stats[y_level]['rel_type'] = \
+            [stats[y_level]["AUC"], 1] \
+            if stats[y_level]["AUC"] > 0.5\
+            else [1 - stats[y_level]["AUC"], -1]
+        
+        stats[y_level]["GINI"] = (stats[y_level]["AUC"] - 0.5)*2
 
-    def recomputor(key):
-        if real_aucs[key] < 0.5: result = {'AUC': 1 - real_aucs[key],'rel_type': -1}
-        else: result = {'AUC' : real_aucs[key], 'rel_type':1}
-        result['GINI'] = (result["AUC"] - 0.5)*2
-        return result
-
-
-    showing_aucs = {key: recomputor(key) for key in real_aucs}
-
-    return showing_aucs
-
-
+    return stats
 
 def get_all_comuptions(column, y_col, fillna_nominal = 'Empty'):
     '''Realise all computions for each column'''
-    # imputs:
+    # inputs:
     # column - pandas.Series predictors column
     # y_col - pandas.Series predicted column
     # fillna_nominal -  optional, the value vich will replace na-values
@@ -245,7 +194,7 @@ def get_all_comuptions(column, y_col, fillna_nominal = 'Empty'):
         column = column.fillna(fillna_nominal)
         new_column_data['describe_table'] = get_describe_nominal(column, y_col)
 
-    new_column_data['AUC_data'] = get_full_AUC( 
+    new_column_data['stats_result'] = get_full_stats( 
         column, y_col, new_column_data['predictor_type'],
         descr_table = new_column_data['describe_table']
     )
@@ -256,20 +205,20 @@ def get_all_comuptions(column, y_col, fillna_nominal = 'Empty'):
 
 #==========================Data represintations===================================
 
-def AUC_info_to_DataFrame(AUC_info, predictors_name = None):
+def stats_info_to_DataFrame(stats_info, predictors_name = None):
     '''Recording structure of dicts describing AUC and same 
     inicators into multiindex column dataframe'''
-    # AUC_info - get_full_AUC function output
+    # stats_info - get_full_computions function output
     # predictors_name - name of predictor, will be used as
     #                   index for new columns
     headers_tuples = []
     line_numbers = []
 
     # preparing new line and multiindex
-    for level in AUC_info:
-        for indicator in AUC_info[level]:
+    for level in stats_info:
+        for indicator in stats_info[level]:
             headers_tuples.append((level, indicator))
-            line_numbers.append(AUC_info[level][indicator])
+            line_numbers.append(stats_info[level][indicator])
 
     col_ind = "0" if predictors_name is None else predictors_name
 
@@ -280,7 +229,7 @@ def AUC_info_to_DataFrame(AUC_info, predictors_name = None):
 
 def get_predictor_row(column_data):
 
-    result = AUC_info_to_DataFrame(column_data['AUC_data'], column_data['name'])
+    result = stats_info_to_DataFrame(column_data['stats_result'], column_data['name'])
     result['Emptys'] = column_data['emptys_count']
     result['Emptys part'] = column_data['emptys_part']
     return result
