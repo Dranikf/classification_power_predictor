@@ -1,8 +1,12 @@
 # fucnitons for special computions
 import pandas as pd
 import numpy as np
+from scipy.stats import kstwo
 
 from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_curve
+from sklearn.metrics import auc
+
 
 
 #==========================Real computions========================================
@@ -59,6 +63,33 @@ def get_AUC_numeric(column, y_col):
         temp_binary_column = y_col.apply(lambda x: 0 if x != level else 1)
         result[level] = (roc_auc_score(temp_binary_column, column/sum(column)) 
                             if column.var() != 0 else 0.5)
+        
+    return result
+
+def get_stats_numeric(column, y_col):
+    
+    #print('this funciton should replace get_AUC_numeric')
+    y_col = y_col[np.invert(column.isna())]
+    column = column.dropna()
+
+    result = {}
+
+    # for every y_col level we have auc, KS, and pvalue computed as all vs one
+    for level in y_col.unique():
+        
+        result[level] = {}
+        
+        temp_binary_column = y_col.apply(lambda x: 0 if x != level else 1)
+        col_norm = (column - np.min(column))/(np.max(column) - np.min(column))
+        fpr, tpr, _ = roc_curve(temp_binary_column, col_norm)
+        result[level]['AUC'] = (auc(fpr, tpr) if column.var() != 0 else 0.5)
+        # ...
+        result[level]['KS'] = np.max(np.abs(fpr - tpr))
+        # https://towardsdatascience.com/comparing-sample-distributions-with-the-kolmogorov-smirnov-ks-test-a2292ad6fee5
+        n = sum(y_col == level)
+        m = sum(y_col != level)
+        en = n*m/(n+m)
+        result[level]['KS_p_val'] = kstwo.sf(result[level]['KS'], np.round(en))
         
     return result
 
