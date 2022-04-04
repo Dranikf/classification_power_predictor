@@ -66,8 +66,47 @@ def get_AUC_numeric(column, y_col):
         
     return result
 
-def get_stats_numeric(column, y_col):
+
+def get_KS_ts_pvalue(y_col, level, KS_stat):
+    '''Get two side p-value for KS stat'''
+    # inputs:
+    # y_col - column with discriminant values
+    # level - value of y_col which will be regarded as True
+    # KS_stat - statistic for which is calculated p-value
+    # outputs:
+    # p-value
+    n = sum(y_col == level)
+    m = sum(y_col != level)
+    en = n*m/(n+m)
     
+    return kstwo.sf(KS_stat, np.round(en))
+
+def get_all_stats_for_given_predictor(column, y_col, level):
+    '''The service function for stats compution
+    at the stage when all values are reduced to numeric form'''
+    result = {}
+
+    temp_binary_column = y_col.apply(lambda x: 0 if x != level else 1)
+    col_norm = (column - np.min(column))/(np.max(column) - np.min(column))
+    fpr, tpr, _ = roc_curve(temp_binary_column, col_norm)
+    result['AUC'] = (auc(fpr, tpr) if column.var() != 0 else 0.5)
+    result['KS'] = np.max(np.abs(fpr - tpr))
+    result['KS_p_val'] = get_KS_ts_pvalue(y_col, level, result['KS'])
+    
+    return result 
+    
+
+def get_stats_numeric(column, y_col):
+    '''Statistics of categorizing ability for column'''
+    # inputs:
+    # column - pandas.Series predictor column
+    # y_col - pandas.Series predicted column
+    # outputs:
+    # dictionary which contains result {<y_levels>:{
+        #"AUC":<AUC for this levels>,
+        #"KS": <KS for this levels>,
+        #"KS_p_vlaue" : <p-value for two sied KS test>
+    #}}
     #print('this funciton should replace get_AUC_numeric')
     y_col = y_col[np.invert(column.isna())]
     column = column.dropna()
@@ -76,22 +115,45 @@ def get_stats_numeric(column, y_col):
 
     # for every y_col level we have auc, KS, and pvalue computed as all vs one
     for level in y_col.unique():
-        
-        result[level] = {}
-        
-        temp_binary_column = y_col.apply(lambda x: 0 if x != level else 1)
-        col_norm = (column - np.min(column))/(np.max(column) - np.min(column))
-        fpr, tpr, _ = roc_curve(temp_binary_column, col_norm)
-        result[level]['AUC'] = (auc(fpr, tpr) if column.var() != 0 else 0.5)
-        # ...
-        result[level]['KS'] = np.max(np.abs(fpr - tpr))
-        # https://towardsdatascience.com/comparing-sample-distributions-with-the-kolmogorov-smirnov-ks-test-a2292ad6fee5
-        n = sum(y_col == level)
-        m = sum(y_col != level)
-        en = n*m/(n+m)
-        result[level]['KS_p_val'] = kstwo.sf(result[level]['KS'], np.round(en))
+        result[level] = get_all_stats_for_given_predictor(column, y_col, level)
         
     return result
+
+
+def get_stats_nominal(column, y_col, descr_table = None):
+    '''Returns AUC for nominal predictor. Levels will be
+    displayed in order of increasing part of predicted level.
+    Nas in column will be ignored, should be processed before '''
+    # inputs:
+    # column - pandas.Series predictors column
+    # y_col - pandas.Series predicted column
+    # descr_table - pandas.DataFrame (optional), out of get_describe_nominal
+    #               function for predictor. Will be computed automaticaly by default
+    # outputs:
+    # dictionary which contains result {<y_levels>:{
+        #"AUC":<AUC for this levels>,
+        #"KS": <KS for this levels>,
+        #"KS_p_vlaue" : <p-value for two sied KS test>
+    #}}
+    if descr_table is None:
+        descr_table = get_describe_nominal(column, y_col)
+    
+    # in case column has only one level need return 0.5
+    # for all y levels - predictor are useless
+    if descr_table.shape[0] <= 1:
+        return {level : 0.5 for level in y_col.unique()}
+
+    result = {}
+
+    for level in y_col.unique():
+        level_distr = descr_table[str(level) + "%"].sort_values()
+        numbers = column.replace({n:i for i,n in enumerate(level_distr.index)})
+        
+        result[level] = get_all_stats_for_given_predictor(numbers, y_col, level)
+
+    return result
+
+
 
 def get_AUC_nominal(column, y_col, descr_table = None):
     '''Returns AUC for nominal predictor. Levels will be
