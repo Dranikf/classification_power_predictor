@@ -164,9 +164,18 @@ def get_full_stats(column, y_col, predictor_type, descr_table = None):
             if stats[y_level]["AUC"] > 0.5\
             else [1 - stats[y_level]["AUC"], -1]
         
+        
+        y_eq_level_cond = (y_col == y_level)
+        y_lev_count = sum(y_eq_level_cond)
+        y_emp_count = sum(column.isna())
+        
         stats[y_level]["GINI"] = (stats[y_level]["AUC"] - 0.5)*2
-        stats[y_level]["Empty"] = sum(column.isna())
-        #stats[]
+        stats[y_level]["Count"] = y_lev_count
+        stats[y_level]["Empty"] = sum(column[y_eq_level_cond].isna())
+        stats[y_level]["Empty% in level"] = (stats[y_level]["Empty"]*100)/y_lev_count
+        stats[y_level]["Empty% in all Empty"] = \
+            (stats[y_level]["Empty"]*100)/y_emp_count\
+            if y_emp_count != 0 else 0.0
 
     return stats
 
@@ -180,8 +189,8 @@ def get_all_comuptions(column, y_col, fillna_nominal = 'Empty'):
 
     new_column_data = {}
     new_column_data['name'] = column.name
-    new_column_data['emptys_count'] = sum(column.isna())
-    new_column_data['emptys_part'] = (new_column_data['emptys_count'] / 
+    new_column_data['empty count'] = sum(column.isna())
+    new_column_data['empty part'] = (new_column_data['empty count'] / 
                                       column.shape[0])
 
 
@@ -233,8 +242,8 @@ def stats_info_to_DataFrame(stats_info, predictors_name = None):
 def get_predictor_row(column_data):
 
     result = stats_info_to_DataFrame(column_data['stats_result'], column_data['name'])
-    result['Empty'] = column_data['emptys_count']
-    result['Empty part'] = column_data['emptys_part']
+    result['Empty'] = column_data['empty count']
+    result['Empty part'] = column_data['empty part']
     return result
 
 #==========================Data represintations===================================    
