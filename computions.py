@@ -87,7 +87,6 @@ def get_stats_numeric(column, y_col):
         #"KS": <KS for this levels>,
         #"KS_p_vlaue" : <p-value for two sied KS test>
     #}}
-    #print('this funciton should replace get_AUC_numeric')
     y_col = y_col[np.invert(column.isna())]
     column = column.dropna()
 
@@ -134,28 +133,39 @@ def get_stats_nominal(column, y_col, descr_table = None):
     return result
 
 
-def get_full_stats(column, y_col, predictor_type, descr_table = None):
-    '''Funciton for getting AUC and other statistics
+def get_full_stats(
+    column, y_col, predictor_type, descr_table = None,
+    fillna_nominal = 'Empty'
+):
+    '''Funciton for getting whole statistics
     for any predictor type. If returns "showing" AUC - 
     if real AUC less then 0.5 it doesn't seem that 
     predictor bad - it seems that relationship inverse, 
-    so in this case showing AUC is (1 - <real AUC>). 
-    All inputs must be without nas!'''
+    so in this case showing AUC is (1 - <real AUC>)'''
     # inputs:
     # column - pandas.Series predictors column
     # y_col - pandas.Series predicted column
     #                   
     # outputs:
-    # dict {<level of y_col>: {"AUC":<showing auc>,
-    #                          "KS": KS statistics
-    #                          "KS_p_value": p value for two side KS test
-    #                          "rel_type" <rel. type -1/1>,
-    #                           "GINI": <GINI>}}
-
+    # dict {<level of y_col>: {
+    #  "AUC":<showing auc>,
+    #  "KS": KS statistics
+    #  "KS_p_value": p value for two side KS test
+    #  "rel_type" <rel. type -1/1>,
+    #  "GINI": <GINI>,
+    #  "Count": count of observations with this level
+    #  "Empty": count of empty values for this level
+    #  "Empty% in level": share of NaNs in this level
+    #  "Empty% in all Empty": share of NaNs of this level in whole NaNs
+    #}}
+    
+    
     if predictor_type == 'numeric':
         stats = get_stats_numeric(column, y_col)
     else:
-        stats = get_stats_nominal(column, y_col, descr_table)
+        stats = get_stats_nominal(
+            column.fillna(fillna_nominal), y_col, descr_table
+        )
     
     
     for y_level in stats:
@@ -172,30 +182,38 @@ def get_full_stats(column, y_col, predictor_type, descr_table = None):
         stats[y_level]["GINI"] = (stats[y_level]["AUC"] - 0.5)*2
         stats[y_level]["Count"] = y_lev_count
         stats[y_level]["Empty"] = sum(column[y_eq_level_cond].isna())
-        stats[y_level]["Empty% in level"] = (stats[y_level]["Empty"]*100)/y_lev_count
+        stats[y_level]["Empty% in level"] = (stats[y_level]["Empty"]*100)\
+                                                /y_lev_count
         stats[y_level]["Empty% in all Empty"] = \
             (stats[y_level]["Empty"]*100)/y_emp_count\
             if y_emp_count != 0 else 0.0
 
     return stats
 
-def get_all_comuptions(column, y_col, fillna_nominal = 'Empty'):
+
+def get_all_computions(column, y_col, fillna_nominal = 'Empty'):
     '''Realise all computions for each column'''
     # inputs:
     # column - pandas.Series predictors column
     # y_col - pandas.Series predicted column
     # fillna_nominal -  optional, the value vich will replace na-values
     #                   "Empty" by default
-
+    
+    if len(column[np.invert(column.isna())].unique()) <= 1:
+        raise ValueError(
+            "getted column with all same values - " +
+            column.name
+        )
+    
     new_column_data = {}
     new_column_data['name'] = column.name
     new_column_data['empty count'] = sum(column.isna())
     new_column_data['empty part'] = (new_column_data['empty count'] / 
                                       column.shape[0])
 
-
-    is_numeric = np.isin(column.dtype, 
-                        [np.int64, np.float64, np.int32, np.float64])
+    is_numeric = np.isin(
+        column.dtype, [np.int64, np.float64, np.int32, np.float64]
+    )
 
     if is_numeric:
         new_column_data['predictor_type'] = 'numeric'
@@ -203,12 +221,14 @@ def get_all_comuptions(column, y_col, fillna_nominal = 'Empty'):
                 
     else:
         new_column_data['predictor_type'] = 'nominal'
-        column = column.fillna(fillna_nominal)
-        new_column_data['describe_table'] = get_describe_nominal(column, y_col)
+        new_column_data['describe_table'] = \
+        get_describe_nominal(column.fillna(fillna_nominal), y_col)
 
     new_column_data['stats_result'] = get_full_stats( 
-        column, y_col, new_column_data['predictor_type'],
-        descr_table = new_column_data['describe_table']
+        column, y_col, 
+        new_column_data['predictor_type'],
+        descr_table = new_column_data['describe_table'],
+        fillna_nominal = fillna_nominal
     )
             
     return new_column_data

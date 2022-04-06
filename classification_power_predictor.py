@@ -49,8 +49,12 @@ class classification_power_predictor():
 
         for col_name in self._table.columns:
 
-            self._predictors_data[col_name] = get_all_comuptions(self._table[col_name], self._y_col)
-            self.result_DF = pd.concat([self.result_DF, get_predictor_row(self._predictors_data[col_name])])
+            self._predictors_data[col_name] = \
+            get_all_computions(self._table[col_name], self._y_col)
+            self.result_DF = pd.concat([
+                self.result_DF,
+                get_predictor_row(self._predictors_data[col_name])
+            ])
 
 
 
