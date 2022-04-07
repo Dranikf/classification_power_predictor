@@ -208,7 +208,7 @@ def get_all_computions(column, y_col, fillna_nominal = 'Empty'):
     new_column_data = {}
     new_column_data['name'] = column.name
     new_column_data['empty count'] = sum(column.isna())
-    new_column_data['empty part'] = (new_column_data['empty count'] / 
+    new_column_data['empty part%'] = (new_column_data['empty count']*100 / 
                                       column.shape[0])
 
     is_numeric = np.isin(
@@ -263,7 +263,7 @@ def get_predictor_row(column_data):
 
     result = stats_info_to_DataFrame(column_data['stats_result'], column_data['name'])
     result['Empty'] = column_data['empty count']
-    result['Empty part'] = column_data['empty part']
+    result['Empty part%'] = column_data['empty part%']
     return result
 
 #==========================Data represintations===================================    
